@@ -40,7 +40,7 @@ mitm-toolkit/
 
 ```bash
 # 1. Clone & setup
-git clone https://github.com/xrl3y/Man-In-The-Middle.git && cd Man-In-The-Middle
+git clone https://github.com/Eliot-code/Man-In-The-Middle.git && cd Man-In-The-Middle
 sudo apt install -y python3-scapy dsniff && pip3 install termcolor
 chmod +x AllNetwork_Spoof.sh
 
