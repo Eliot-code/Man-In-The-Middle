@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Capture artifacts
+*.log
+*.pcap
+*.pcapng
+captures/
+
+# Exports produced by the toolkit
+scan_results.*
+dns_map.json
+sessions.json
+intel.json
+session.log
+
+# Editor / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
